@@ -4,8 +4,8 @@ from typing import List, Tuple
 FILE_PATH = "input"
 
 
-def main():
-    full_path = os.path.join(os.path.dirname(__file__), FILE_PATH)
+def main(path) -> int:
+    full_path = os.path.join(os.path.dirname(__file__), path)
     numbers = read_file(full_path)
     list_1, list_2 = create_lists(numbers)
 
@@ -20,6 +20,7 @@ def main():
             similarity_score += num * occurences
 
     print(f"The similarity score is {similarity_score}")
+    return similarity_score
 
 
 def create_lists(numbers: List[str]) -> Tuple[List[str], List[str]]:
@@ -41,4 +42,4 @@ def read_file(path: str) -> List[str]:
 
 
 if __name__ == "__main__":
-    main()
+    main(FILE_PATH)
