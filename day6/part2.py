@@ -5,23 +5,15 @@ from typing import List, Tuple
 
 FILE_PATH = "input"
 
-# Put collisions on path walked in part 1
-# Find loop by checking if collision is found again with same direction
-
 
 class Map:
-    # (VERTICAL, HORIZONTAL)
-    # Vertical step should be -1 for up, 0 for none and 1 for down
-    # Horizontal step should be -1 for left, 0 for none and 1 for right
     orientations = (
-        (-1, 0),
-        (0, 1),
-        (1, 0),
-        (0, -1),
+        (-1, 0),  # up
+        (0, 1),  # right
+        (1, 0),  # down
+        (0, -1),  # left
     )
     current_orientation_index = 0
-    has_collision = False
-    last_collision = None
 
     def __init__(self, grid) -> None:
         self.grid = grid
@@ -35,92 +27,66 @@ class Map:
                 if self.grid[y][x] == "^":
                     return (y, x)
 
-    def do_step(self) -> Tuple[bool, bool]:
-        """Will return True if not yet out of bounds"""
-        try:
-            new_y = (
-                self.current_position[0]
-                + self.orientations[self.current_orientation_index][0]
-            )
-            new_x = (
-                self.current_position[1]
-                + self.orientations[self.current_orientation_index][1]
-            )
-            if self.can_step(new_y, new_x):
-                # We need to access to grid so that we can trigger an IndexError
-                self.grid[new_y][new_x]
-                self.current_position = (new_y, new_x)
-                self.visited_positions.add(self.current_position)
-            else:
-                if self.grid[new_y][new_x] == "O" and self.has_collision:
-                    collision_location = (
-                        (new_y, new_x),
-                        self.current_orientation_index,
-                    )
-                    if self.last_collision:
-                        if self.last_collision == collision_location:
-                            return False, True
-                    else:
-                        self.last_collision = collision_location
+    def do_step(self) -> bool:
+        dy, dx = self.orientations[self.current_orientation_index]
+        new_y = self.current_position[0] + dy
+        new_x = self.current_position[1] + dx
 
-                self.rotate_right_90_degrees()
-        except IndexError:
-            return False, False
+        if not (0 <= new_y < len(self.grid) and 0 <= new_x < len(self.grid[0])):
+            return False  # guard left the area
 
-        return True, False
+        if self.grid[new_y][new_x] in ("#", "O"):
+            self.rotate_right_90_degrees()
+            return True
+
+        self.current_position = (new_y, new_x)
+        self.visited_positions.add(self.current_position)
+        return True
 
     def rotate_right_90_degrees(self):
         self.current_orientation_index = (self.current_orientation_index + 1) % 4
 
-    def can_step(self, y, x) -> bool:
-        try:
-            if self.grid[y][x] == "#" or self.grid[y][x] == "O":
-                return False
-        except IndexError:
-            return True
-        return True
-
-    def get_distinct_positons(self):
+    def get_distinct_positions(self):
         return len(self.visited_positions)
 
     def add_collision(self, y, x):
         self.grid[y][x] = "O"
-        self.has_collision = True
 
     def check_for_loop(self) -> bool:
-        max_n = sum(len(row) for row in self.grid)
-        step_result = self.do_step()
-        i = 0
-        while step_result[0] and i < max_n + 1:
-            i += 1
-            step_result = self.do_step()
+        visited_states = set()
+        while True:
+            state = (
+                self.current_position[0],
+                self.current_position[1],
+                self.current_orientation_index,
+            )
+            if state in visited_states:
+                return True
+            visited_states.add(state)
 
-        if step_result[1] == True or i >= max_n:
-            return True
-        return False
+            can_continue = self.do_step()
+            if not can_continue:
+                return False
 
 
 def main(path):
     grid = read_file(path)
 
-    part1_map = Map(grid)
-    collision_map = Map(grid)
+    part1_map = Map(copy.deepcopy(grid))
 
-    guard_starting_position = part1_map.find_starting_position()
+    guard_starting_position = part1_map.current_position
 
-    while part1_map.do_step()[0]:
+    while part1_map.do_step():
         pass
 
-    # Put collisions on walked path
     possible_collision_locations = part1_map.visited_positions.copy()
     possible_collision_locations.remove(guard_starting_position)
 
     looped = 0
     for collision in possible_collision_locations:
-        map = copy.deepcopy(collision_map)
-        map.add_collision(collision[0], collision[1])
-        print(looped)
-        if map.check_for_loop():
+        test_map = Map(copy.deepcopy(grid))
+        test_map.add_collision(collision[0], collision[1])
+        if test_map.check_for_loop():
             looped += 1
 
     print(looped)
@@ -128,7 +94,7 @@ def main(path):
 
 def read_file(path: str) -> List[List[str]]:
     with open(path) as input_file:
-        return [list(line.strip()) for line in input_file]
+        return [list(line.rstrip("\n")) for line in input_file]
 
 
 if __name__ == "__main__":
